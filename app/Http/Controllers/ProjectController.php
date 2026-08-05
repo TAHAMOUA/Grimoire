@@ -13,6 +13,8 @@ class ProjectController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', Project::class);
+
         $projects = Project::all();
 
         return view('projects.index', compact('projects'));
@@ -23,6 +25,8 @@ class ProjectController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Project::class);
+
         return view('projects.create');
     }
 
@@ -31,6 +35,8 @@ class ProjectController extends Controller
      */
     public function store(StoreProjectRequest $request)
     {
+        $this->authorize('create', Project::class);
+
         Project::create($request->validated());
 
         return redirect()
@@ -43,6 +49,8 @@ class ProjectController extends Controller
      */
     public function show(Project $project)
     {
+        $this->authorize('view', $project);
+
         return view('projects.show', compact('project'));
     }
 
@@ -51,6 +59,8 @@ class ProjectController extends Controller
      */
     public function edit(Project $project)
     {
+        $this->authorize('update', $project);
+
         return view('projects.edit', compact('project'));
     }
 
@@ -59,6 +69,8 @@ class ProjectController extends Controller
      */
     public function update(UpdateProjectRequest $request, Project $project)
     {
+        $this->authorize('update', $project);
+
         $project->update($request->validated());
 
         return redirect()
@@ -71,6 +83,8 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project)
     {
+        $this->authorize('delete', $project);
+
         $project->delete();
 
         return redirect()
