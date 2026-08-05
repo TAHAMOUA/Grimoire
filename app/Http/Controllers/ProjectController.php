@@ -31,6 +31,8 @@ class ProjectController extends Controller
         return view('projects.create');
     }
 
+
+
     /**
      * Store a newly created resource in storage.
      */
