@@ -43,7 +43,13 @@ Route::middleware('auth')->group(function () {
     */
 
     Route::resource('projects', ProjectController::class);
+Route::post('/projects/{project}/members', [ProjectController::class, 'addMember'])
+    ->name('projects.members.add');
 
+Route::delete('/projects/{project}/members/{user}', [ProjectController::class, 'removeMember'])
+    ->name('projects.members.remove');
+    Route::get('/projects/archived', [ProjectController::class, 'archived'])
+    ->name('projects.archived');
 });
 
 require __DIR__.'/auth.php';

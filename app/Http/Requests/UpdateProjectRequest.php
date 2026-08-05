@@ -20,10 +20,15 @@ class UpdateProjectRequest extends FormRequest
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
-    public function rules(): array
+  
+    
+   public function rules(): array
     {
-        return [
-            //
-        ];
-    }
+    return [
+        'title' => 'required|string|max:255',
+        'description' => 'required|string',
+        'status' => 'required|in:encours,cloture',
+        'avancement' => 'required|integer|min:0|max:100',
+    ];
+}
 }
