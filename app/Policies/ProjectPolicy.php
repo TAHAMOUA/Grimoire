@@ -4,20 +4,11 @@ namespace App\Policies;
 
 use App\Models\Project;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class ProjectPolicy
 {
-    private function getRole(User $user, Project $project): ?string
-{
-    $member = $project->users()
-        ->where('users.id', $user->id)
-        ->first();
-
-    return $member?->pivot?->role;
-}
     /**
-     * Determine whether the user can view any models.
+     * Afficher la liste des projets.
      */
     public function viewAny(User $user): bool
     {
@@ -25,15 +16,15 @@ class ProjectPolicy
     }
 
     /**
-     * Determine whether the user can view the model.
+     * Voir un projet.
      */
     public function view(User $user, Project $project): bool
     {
-        return true;
+        return $project->users()->where('user_id', $user->id)->exists();
     }
 
     /**
-     * Determine whether the user can create models.
+     * Créer un projet.
      */
     public function create(User $user): bool
     {
@@ -41,44 +32,40 @@ class ProjectPolicy
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Modifier un projet.
      */
     public function update(User $user, Project $project): bool
     {
-        return $this->getRole($user, $project) === 'responsable';
+        return $project->users()
+            ->where('user_id', $user->id)
+            ->wherePivot('role', 'responsable')
+            ->exists();
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Archiver un projet.
      */
     public function delete(User $user, Project $project): bool
     {
-        return $this->getRole($user, $project) === 'responsable';
-    }
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Project $project): bool
-    {
-        return $this->getRole($user, $project) === 'responsable';
+        return $project->users()
+            ->where('user_id', $user->id)
+            ->wherePivot('role', 'responsable')
+            ->exists();
     }
 
     /**
-     * Determine whether the user can permanently delete the model.
+     * Restaurer un projet.
+     */
+    public function restore(User $user, Project $project): bool
+    {
+        return false;
+    }
+
+    /**
+     * Suppression définitive.
      */
     public function forceDelete(User $user, Project $project): bool
     {
         return false;
-    }
-    public function removeMember(User $user, Project $project): bool
-    {
-        return $this->getRole($user, $project) === 'responsable';
-    }
-    public function updateProgress(User $user, Project $project): bool
-    {
-        return in_array(
-            $this->getRole($user, $project),
-            ['responsable', 'chercheur']
-        );
     }
 }

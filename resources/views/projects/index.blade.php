@@ -1,110 +1,144 @@
-<x-app-layout>
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+@foreach($projects as $project)
+
+<div class="bg-zinc-900 border border-red-800 rounded-2xl p-6 hover:border-red-500 transition">
+
+<h2 class="text-2xl text-white font-bold">
+
+{{ $project->title }}
+
+</h2>
+
+<p class="text-gray-400 mt-3">
+
+{{ Str::limit($project->description,80) }}
+
+</p>
+
+<div class="mt-5">
+
+<a
+href="{{ route('projects.show',$project) }}"
+class="text-red-400">
+
+Voir →
+
+</a>
+
+</div>
+
+</div>
+
+@endforeach
+
+</div><x-app-layout>
+
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Liste des projets
-        </h2>
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800">
+                Liste des projets
+            </h2>
+
+            @can('create', App\Models\Project::class)
+                <a href="{{ route('projects.create') }}"
+                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                    Nouveau Projet
+                </a>
+            @endcan
+        </div>
     </x-slot>
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
             @if(session('success'))
-                <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
                     {{ session('success') }}
                 </div>
             @endif
 
-            @can('create', App\Models\Project::class)
-                <a href="{{ route('projects.create') }}"
-                   class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
-                    Nouveau projet
-                </a>
-            @endcan
+            <div class="bg-white shadow rounded-lg">
 
-            <div class="mt-6 bg-white shadow rounded-lg">
-                <table class="min-w-full">
-                    <thead>
-                        <tr class="border-b">
-                            <th class="p-3 text-left">Titre</th>
-                            <th class="p-3 text-left">Status</th>
-                            <th class="p-3 text-left">Avancement</th>
-                            <th class="p-3 text-left">Actions</th>
+                <table class="min-w-full border-collapse">
+
+                    <thead class="bg-gray-100">
+
+                        <tr>
+                            <th class="px-6 py-3 text-left">Titre</th>
+                            <th class="px-6 py-3 text-left">Status</th>
+                            <th class="px-6 py-3 text-left">Avancement</th>
+                            <th class="px-6 py-3 text-center">Actions</th>
                         </tr>
+
                     </thead>
 
                     <tbody>
 
-                    @forelse($projects as $project)
+                        @forelse($projects as $project)
 
-                        <tr class="border-b">
+                            <tr class="border-t">
 
-                            <td class="p-3">
-                                {{ $project->title }}
-                            </td>
+                                <td class="px-6 py-4">
+                                    {{ $project->title }}
+                                </td>
 
-                            <td class="p-3">
-                                {{ $project->status }}
-                            </td>
+                                <td class="px-6 py-4">
+                                    {{ $project->status }}
+                                </td>
 
-                            <td class="p-3">
-                                {{ $project->avancement }}%
-                            </td>
+                                <td class="px-6 py-4">
+                                    {{ $project->avancement }}%
+                                </td>
 
-                            <td class="p-3">
+                                <td class="px-6 py-4 text-center">
 
-                                <a href="{{ route('projects.show',$project) }}"
-                                   class="text-blue-600">
-                                    Voir
-                                </a>
-
-                                @can('update',$project)
-
-                                    |
-
-                                    <a href="{{ route('projects.edit',$project) }}"
-                                       class="text-yellow-600">
-                                        Modifier
+                                    <a href="{{ route('projects.show', $project) }}"
+                                       class="text-blue-600 hover:underline">
+                                        Voir
                                     </a>
 
-                                @endcan
+                                    @can('update', $project)
+                                        |
+                                        <a href="{{ route('projects.edit', $project) }}"
+                                           class="text-yellow-600 hover:underline">
+                                            Modifier
+                                        </a>
+                                    @endcan
 
-                                @can('delete',$project)
+                                    @can('delete', $project)
+                                        |
+                                        <form action="{{ route('projects.destroy', $project) }}"
+                                              method="POST"
+                                              class="inline">
 
-                                    <form
-                                        action="{{ route('projects.destroy',$project) }}"
-                                        method="POST"
-                                        class="inline">
+                                            @csrf
+                                            @method('DELETE')
 
-                                        @csrf
-                                        @method('DELETE')
+                                            <button type="submit"
+                                                    onclick="return confirm('Archiver ce projet ?')"
+                                                    class="text-red-600 hover:underline">
+                                                Archiver
+                                            </button>
 
-                                        <button
-                                            onclick="return confirm('Archiver ce projet ?')"
-                                            class="text-red-600">
+                                        </form>
+                                    @endcan
 
-                                            Supprimer
+                                </td>
 
-                                        </button>
+                            </tr>
 
-                                    </form>
+                        @empty
 
-                                @endcan
+                            <tr>
 
-                            </td>
+                                <td colspan="4" class="text-center py-6 text-gray-500">
+                                    Aucun projet trouvé.
+                                </td>
 
-                        </tr>
+                            </tr>
 
-                    @empty
-
-                        <tr>
-
-                            <td colspan="4" class="p-4 text-center">
-                                Aucun projet trouvé.
-                            </td>
-
-                        </tr>
-
-                    @endforelse
+                        @endforelse
 
                     </tbody>
 
