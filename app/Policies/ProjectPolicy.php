@@ -8,12 +8,20 @@ use Illuminate\Auth\Access\Response;
 
 class ProjectPolicy
 {
+    private function getRole(User $user, Project $project): ?string
+{
+    $member = $project->users()
+        ->where('users.id', $user->id)
+        ->first();
+
+    return $member?->pivot?->role;
+}
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -21,7 +29,7 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -29,7 +37,7 @@ class ProjectPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -37,7 +45,7 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
-        return false;
+        return $this->getRole($user, $project) === 'responsable';
     }
 
     /**
@@ -45,15 +53,14 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project): bool
     {
-        return false;
+        return $this->getRole($user, $project) === 'responsable';
     }
-
     /**
      * Determine whether the user can restore the model.
      */
     public function restore(User $user, Project $project): bool
     {
-        return false;
+        return $this->getRole($user, $project) === 'responsable';
     }
 
     /**
@@ -62,5 +69,16 @@ class ProjectPolicy
     public function forceDelete(User $user, Project $project): bool
     {
         return false;
+    }
+    public function removeMember(User $user, Project $project): bool
+    {
+        return $this->getRole($user, $project) === 'responsable';
+    }
+    public function updateProgress(User $user, Project $project): bool
+    {
+        return in_array(
+            $this->getRole($user, $project),
+            ['responsable', 'chercheur']
+        );
     }
 }
