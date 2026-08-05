@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
-
 /*
 |--------------------------------------------------------------------------
 | Page d'accueil
@@ -42,7 +42,7 @@ Route::middleware('auth')->group(function () {
     |
     */
 
-    // Route::resource('projects', ProjectController::class);
+    Route::resource('projects', ProjectController::class);
 
 });
 
