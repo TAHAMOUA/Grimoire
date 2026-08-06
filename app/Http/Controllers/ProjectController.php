@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MembreAjouteAuProjet;
+use App\Events\ProjetCloture;
 use App\Models\Project;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+
 class ProjectController extends Controller
 {
     /**
@@ -78,43 +81,62 @@ class ProjectController extends Controller
             ->route('projects.index')
             ->with('success', 'Projet mis à jour avec succès.');
     }
-    public function addMember(Request $request, Project $project)
-{
-    $this->authorize('update', $project);
 
-    $request->validate([
-        'user_id' => 'required|exists:users,id',
-        'role' => 'required|in:chercheur,etudiant_assistant',
-    ]);
-
-    $project->users()->syncWithoutDetaching([
-        $request->user_id => [
-            'role' => $request->role
-        ]
-    ]);
-
-    return back()->with('success', 'Membre ajouté.');
-}
-public function removeMember(Project $project, User $user)
-{
-    $this->authorize('delete', $project);
-
-    $project->users()->detach($user->id);
-
-    return back()->with('success', 'Membre retiré.');
-}
-public function archived()
-{
-    $projects = Project::onlyTrashed()->get();
-
-    return view('projects.archived', compact('projects'));
-}
     /**
-     * Remove the specified resource.
+     * Ajouter un membre au projet.
+     */
+    public function addMember(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'role' => 'required|in:chercheur,etudiant_assistant',
+        ]);
+
+        $project->users()->syncWithoutDetaching([
+            $request->user_id => [
+                'role' => $request->role,
+            ]
+        ]);
+
+        $user = User::findOrFail($request->user_id);
+
+        event(new MembreAjouteAuProjet($project, $user));
+
+        return back()->with('success', 'Membre ajouté.');
+    }
+
+    /**
+     * Retirer un membre.
+     */
+    public function removeMember(Project $project, User $user)
+    {
+        $this->authorize('delete', $project);
+
+        $project->users()->detach($user->id);
+
+        return back()->with('success', 'Membre retiré.');
+    }
+
+    /**
+     * Liste des projets archivés.
+     */
+    public function archived()
+    {
+        $projects = Project::onlyTrashed()->get();
+
+        return view('projects.archived', compact('projects'));
+    }
+
+    /**
+     * Archiver un projet.
      */
     public function destroy(Project $project)
     {
         $this->authorize('delete', $project);
+
+        event(new ProjetCloture($project));
 
         $project->delete();
 
