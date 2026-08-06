@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
+
 /*
 |--------------------------------------------------------------------------
 | Page d'accueil
@@ -28,28 +29,36 @@ Route::middleware('auth')->group(function () {
 
     // Profil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     /*
     |--------------------------------------------------------------------------
-    | Futures routes des projets
+    | Projets
     |--------------------------------------------------------------------------
     |
-    | Nous les ajouterons à l'étape 3.
+    | IMPORTANT : la route 'archived' doit être AVANT la resource pour que
+    | Laravel ne l'interprète pas comme show(id='archived').
     |
     */
 
-    Route::resource('projects', ProjectController::class);
-Route::post('/projects/{project}/members', [ProjectController::class, 'addMember'])
-    ->name('projects.members.add');
-
-Route::delete('/projects/{project}/members/{user}', [ProjectController::class, 'removeMember'])
-    ->name('projects.members.remove');
+    // Projets archivés — avant le resource pour éviter le conflit
     Route::get('/projects/archived', [ProjectController::class, 'archived'])
-    ->name('projects.archived');
+        ->name('projects.archived');
+
+    // CRUD standard
+    Route::resource('projects', ProjectController::class);
+
+    // Mettre à jour l'avancement (Responsable ou Chercheur)
+    Route::patch('/projects/{project}/avancement', [ProjectController::class, 'updateAvancement'])
+        ->name('projects.avancement.update');
+
+    // Gestion des membres (Responsable seulement)
+    Route::post('/projects/{project}/members', [ProjectController::class, 'addMember'])
+        ->name('projects.members.add');
+
+    Route::delete('/projects/{project}/members/{user}', [ProjectController::class, 'removeMember'])
+        ->name('projects.members.remove');
 });
 
 require __DIR__.'/auth.php';

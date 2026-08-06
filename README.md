@@ -1,58 +1,260 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 📚 Grimoire — Gestion de projets de recherche
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Application Laravel de gestion de projets de recherche académique avec système de rôles, notifications asynchrones et génération automatique de rapports de clôture.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📋 Table des matières
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- [Technologies](#technologies)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Configuration Queue](#configuration-queue)
+- [Commandes de lancement](#commandes-de-lancement)
+- [Architecture — Events, Listeners, Jobs](#architecture)
+- [Notifications](#notifications)
+- [Audit des performances — Debugbar & N+1](#performances)
+- [Tests](#tests)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Technologies
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+| Outil | Version |
+|---|---|
+| PHP | 8.3+ |
+| Laravel | 13.x |
+| MySQL | 8.0+ |
+| Laravel Breeze | Auth UI |
+| Laravel Debugbar | Audit N+1 en dev |
+| Queue driver | `database` |
+| Mail driver | `log` (dev) |
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Installation
 
 ```bash
-composer require laravel/boost --dev
+# 1. Cloner le projet
+git clone <url> grimoire && cd grimoire
 
-php artisan boost:install
+# 2. Installer les dépendances
+composer install
+npm install
+
+# 3. Configurer l'environnement
+cp .env.example .env
+php artisan key:generate
+
+# 4. Configurer la base de données dans .env
+# DB_DATABASE=grimoire  DB_USERNAME=root  DB_PASSWORD=
+
+# 5. Migrer la base de données
+php artisan migrate
+
+# 6. Compiler les assets
+npm run build
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## Configuration
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### `.env` — Variables importantes
 
-## Code of Conduct
+```dotenv
+APP_NAME=Grimoire
+APP_DEBUG=true          # Active Laravel Debugbar automatiquement
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Base de données
+DB_CONNECTION=mysql
+DB_DATABASE=grimoire
 
-## Security Vulnerabilities
+# Queue — driver database (table jobs)
+QUEUE_CONNECTION=database
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# Mail — log en local (voir storage/logs/laravel.log)
+MAIL_MAILER=log
+```
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Configuration Queue
+
+### Fonctionnement
+
+Le projet utilise **`QUEUE_CONNECTION=database`**. Les jobs sont stockés dans la table `jobs` et traités par un worker PHP séparé.
+
+### Queues utilisées
+
+| Queue | Usage |
+|---|---|
+| `default` | Queue par défaut |
+| `notifications` | Listeners (EnvoyerNotificationMembre, EnvoyerNotificationCloture) |
+| `reports` | Job de génération du rapport PDF/texte |
+
+### Créer les tables si nécessaires
+
+```bash
+php artisan queue:table            # table jobs (si non existante)
+php artisan notifications:table    # table notifications (canal database)
+php artisan queue:failed-table     # table failed_jobs
+php artisan migrate
+```
+
+---
+
+## Commandes de lancement
+
+### Développement — Tout lancer en une commande
+
+```bash
+composer run dev
+```
+
+> Lance en parallèle : `php artisan serve` + `queue:listen` + `pail` (logs) + `npm run dev`
+
+### Lancer manuellement
+
+```bash
+# Serveur web
+php artisan serve
+
+# Queue worker (traitement des jobs)
+php artisan queue:work --tries=3
+
+# Queue worker avec queues spécifiques (ordre de priorité)
+php artisan queue:work --queue=notifications,reports,default --tries=3
+
+# Mode listen (redémarre à chaque changement de code)
+php artisan queue:listen --tries=1 --timeout=0
+
+# Voir les logs en temps réel
+php artisan pail
+
+# Voir les jobs en attente
+php artisan queue:monitor
+
+# Rejouer les jobs échoués
+php artisan queue:retry all
+
+# Vider les jobs échoués
+php artisan queue:flush
+```
+
+### Supervision en production (recommandé)
+
+```bash
+# Supervisor — relancer automatiquement les workers
+# /etc/supervisor/conf.d/grimoire-worker.conf
+[program:grimoire-worker]
+command=php /var/www/grimoire/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+numprocs=2
+```
+
+---
+
+## Architecture
+
+### Events → Listeners → Jobs
+
+```
+ProjectController::addMember()
+    └── event(MembreAjouteAuProjet) ──► EnvoyerNotificationMembre [ShouldQueue, queue: notifications]
+                                            └── $user->notify(MembreAjouteNotification)
+
+ProjectController::destroy()
+    └── event(ProjetCloture) ──► EnvoyerNotificationCloture [ShouldQueue, queue: notifications]
+                                     ├── foreach members → notify(ProjetClotureNotification)
+                                     └── GenerateProjectReport::dispatch() [ShouldQueue, queue: reports]
+                                             └── storage/app/reports/rapport_projet_{id}_{date}.txt
+```
+
+### Fichiers clés
+
+| Fichier | Rôle |
+|---|---|
+| `app/Events/MembreAjouteAuProjet.php` | Event ajout membre |
+| `app/Events/ProjetCloture.php` | Event clôture projet |
+| `app/Listeners/EnvoyerNotificationMembre.php` | `ShouldQueue` — notifie le nouveau membre |
+| `app/Listeners/EnvoyerNotificationCloture.php` | `ShouldQueue` — notifie tous les membres + rapport |
+| `app/Jobs/GenerateProjectReport.php` | `ShouldQueue` — génère le rapport texte |
+| `app/Notifications/MembreAjouteNotification.php` | Notification mail + database |
+| `app/Notifications/ProjetClotureNotification.php` | Notification mail + database |
+
+---
+
+## Notifications
+
+### Canaux utilisés
+
+- **`mail`** : Email envoyé à l'utilisateur (driver `log` en local → voir `storage/logs/laravel.log`)
+- **`database`** : Stockage dans la table `notifications` pour affichage UI futur
+
+### Voir les notifications en log
+
+```bash
+# Pendant le développement, les mails sont logués ici :
+php artisan pail --filter="mail"
+# ou
+tail -f storage/logs/laravel.log
+```
+
+### Rapports générés
+
+Les rapports de clôture sont stockés dans :
+```
+storage/app/reports/rapport_projet_{id}_{date}.txt
+```
+
+---
+
+## Performances
+
+### Laravel Debugbar
+
+Installé automatiquement en mode dev (`APP_DEBUG=true`). Visible en bas de chaque page.
+
+**Onglets utiles :**
+- **Queries** : Nombre de requêtes SQL + détection N+1
+- **Timeline** : Temps d'exécution par étape
+- **Models** : Modèles chargés
+
+### Optimisations N+1 appliquées
+
+| Méthode | Avant | Après |
+|---|---|---|
+| `index()` | N+1 sur `userRole()` | `->with('users')` |
+| `show()` | N+1 sur membres | `$project->load('users')` |
+| `archived()` | N+1 sur membres archivés | `->with('users')` |
+| `destroy()` | Membres non chargés pour listener | `$project->load('users')` avant event |
+
+---
+
+## Tests
+
+```bash
+# Lancer tous les tests
+php artisan test
+
+# Tests avec couverture
+php artisan test --coverage
+
+# Lancer uniquement les tests de projet
+php artisan test --filter ProjectTest
+```
+
+### Tester la queue manuellement
+
+```bash
+# Terminal 1 — Démarrer le worker
+php artisan queue:work --tries=3 --verbose
+
+# Terminal 2 — Démarrer le serveur
+php artisan serve
+
+# Puis : ajouter un membre à un projet ou archiver un projet
+# Observer les logs dans le terminal du worker
+```

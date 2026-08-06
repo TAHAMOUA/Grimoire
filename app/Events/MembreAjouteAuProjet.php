@@ -2,6 +2,8 @@
 
 namespace App\Events;
 
+use App\Models\Project;
+use App\Models\User;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -10,15 +12,19 @@ class MembreAjouteAuProjet
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $project;
-    public $user;
+    public Project $project;
+    public User    $user;
+    public string  $role;
 
     /**
-     * Create a new event instance.
+     * @param Project $project Le projet auquel le membre a été ajouté.
+     * @param User    $user    L'utilisateur ajouté.
+     * @param string  $role    Le rôle attribué (chercheur, etudiant_assistant).
      */
-    public function __construct($project, $user)
+    public function __construct(Project $project, User $user, string $role)
     {
         $this->project = $project;
-        $this->user = $user;
+        $this->user    = $user;
+        $this->role    = $role;
     }
 }

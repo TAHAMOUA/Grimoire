@@ -13,19 +13,23 @@ use Illuminate\Http\Request;
 class ProjectController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Afficher uniquement les projets auxquels l'utilisateur appartient.
+     * ✅ with('users') évite le N+1 lors de l'affichage des rôles.
      */
     public function index()
     {
         $this->authorize('viewAny', Project::class);
 
-        $projects = Project::all();
+        $projects = auth()->user()
+            ->projects()
+            ->with('users')   // ✅ eager load — évite N+1 pour userRole()
+            ->get();
 
         return view('projects.index', compact('projects'));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Formulaire de création — tout utilisateur connecté peut créer un projet.
      */
     public function create()
     {
@@ -35,13 +39,16 @@ class ProjectController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Créer le projet et attacher l'auteur comme responsable.
      */
     public function store(StoreProjectRequest $request)
     {
         $this->authorize('create', Project::class);
 
-        Project::create($request->validated());
+        $project = Project::create($request->validated());
+
+        // Attacher l'auteur en tant que responsable
+        $project->users()->attach(auth()->id(), ['role' => 'responsable']);
 
         return redirect()
             ->route('projects.index')
@@ -49,17 +56,24 @@ class ProjectController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Afficher les détails d'un projet.
+     * ✅ with('users') sur la relation pour éviter N+1 dans la vue.
      */
     public function show(Project $project)
     {
         $this->authorize('view', $project);
 
-        return view('projects.show', compact('project'));
+        // ✅ Eager load des membres (évite N+1 dans la vue Blade)
+        $project->load('users');
+
+        $userRole = $project->userRole(auth()->user());
+        $allUsers = User::whereNotIn('id', $project->users->pluck('id'))->get();
+
+        return view('projects.show', compact('project', 'userRole', 'allUsers'));
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Formulaire de modification — Responsable seulement.
      */
     public function edit(Project $project)
     {
@@ -69,7 +83,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * Update the specified resource.
+     * Mettre à jour le projet — Responsable seulement.
      */
     public function update(UpdateProjectRequest $request, Project $project)
     {
@@ -78,41 +92,68 @@ class ProjectController extends Controller
         $project->update($request->validated());
 
         return redirect()
-            ->route('projects.index')
+            ->route('projects.show', $project)
             ->with('success', 'Projet mis à jour avec succès.');
     }
 
     /**
-     * Ajouter un membre au projet.
+     * Mettre à jour uniquement l'avancement — Responsable ou Chercheur.
+     */
+    public function updateAvancement(Request $request, Project $project)
+    {
+        $this->authorize('updateAvancement', $project);
+
+        $request->validate([
+            'avancement' => 'required|integer|min:0|max:100',
+        ]);
+
+        $project->update(['avancement' => $request->avancement]);
+
+        return back()->with('success', 'Avancement mis à jour.');
+    }
+
+    /**
+     * Ajouter un membre au projet — Responsable seulement.
+     * ✅ L'event transporte maintenant le rôle pour la notification.
      */
     public function addMember(Request $request, Project $project)
     {
-        $this->authorize('update', $project);
+        $this->authorize('manageMember', $project);
 
         $request->validate([
             'user_id' => 'required|exists:users,id',
-            'role' => 'required|in:chercheur,etudiant_assistant',
+            'role'    => 'required|in:chercheur,etudiant_assistant',
         ]);
 
+        // Vérifier que l'utilisateur n'est pas déjà membre
+        if ($project->users()->where('user_id', $request->user_id)->exists()) {
+            return back()->with('error', 'Cet utilisateur est déjà membre du projet.');
+        }
+
         $project->users()->syncWithoutDetaching([
-            $request->user_id => [
-                'role' => $request->role,
-            ]
+            $request->user_id => ['role' => $request->role],
         ]);
 
         $user = User::findOrFail($request->user_id);
 
-        event(new MembreAjouteAuProjet($project, $user));
+        // ✅ On passe le rôle à l'event pour que la notification soit complète
+        event(new MembreAjouteAuProjet($project, $user, $request->role));
 
         return back()->with('success', 'Membre ajouté.');
     }
 
     /**
-     * Retirer un membre.
+     * Retirer un membre — Responsable seulement.
+     * Protection : on ne peut pas retirer le dernier responsable.
      */
     public function removeMember(Project $project, User $user)
     {
-        $this->authorize('delete', $project);
+        $this->authorize('manageMember', $project);
+
+        // Empêcher la suppression du dernier responsable
+        if ($project->isResponsable($user) && !$project->hasOtherResponsable($user)) {
+            return back()->with('error', 'Impossible de retirer le dernier responsable du projet.');
+        }
 
         $project->users()->detach($user->id);
 
@@ -120,21 +161,31 @@ class ProjectController extends Controller
     }
 
     /**
-     * Liste des projets archivés.
+     * Projets archivés de l'utilisateur connecté.
+     * ✅ with('users') pour éviter N+1 sur les données de l'archive.
      */
     public function archived()
     {
-        $projects = Project::onlyTrashed()->get();
+        $this->authorize('viewAny', Project::class);
+
+        $projects = Project::onlyTrashed()
+            ->whereHas('users', fn($q) => $q->where('user_id', auth()->id()))
+            ->with('users')   // ✅ eager load
+            ->get();
 
         return view('projects.archived', compact('projects'));
     }
 
     /**
-     * Archiver un projet.
+     * Archiver un projet — Responsable seulement.
+     * ✅ On charge les membres AVANT le soft-delete pour que le listener puisse les notifier.
      */
     public function destroy(Project $project)
     {
         $this->authorize('delete', $project);
+
+        // ✅ Charger les membres avant archivage pour que le listener les ait disponibles
+        $project->load('users');
 
         event(new ProjetCloture($project));
 
