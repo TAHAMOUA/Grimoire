@@ -21,6 +21,9 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
+        if ($project->trashed()) {
+            return $project->isResponsable($user);
+        }
         return $project->users()->where('user_id', $user->id)->exists();
     }
 
@@ -29,7 +32,8 @@ class ProjectPolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        // Un utilisateur ayant le rôle global "responsable" peut créer un projet.
+        return $user->role === 'responsable';
     }
 
     /**
@@ -37,7 +41,7 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
-        return $project->isResponsable($user);
+        return !$project->trashed() && $project->isResponsable($user);
     }
 
     /**
@@ -45,7 +49,7 @@ class ProjectPolicy
      */
     public function updateAvancement(User $user, Project $project): bool
     {
-        return $project->isResponsable($user) || $project->isChercheur($user);
+        return !$project->trashed() && ($project->isResponsable($user) || $project->isChercheur($user));
     }
 
     /**
@@ -53,7 +57,7 @@ class ProjectPolicy
      */
     public function manageMember(User $user, Project $project): bool
     {
-        return $project->isResponsable($user);
+        return !$project->trashed() && $project->isResponsable($user);
     }
 
     /**
@@ -61,7 +65,7 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project): bool
     {
-        return $project->isResponsable($user);
+        return !$project->trashed() && $project->isResponsable($user);
     }
 
     /**

@@ -70,24 +70,29 @@
                     </div>
                 </div>
 
-                @can('update', $project)
+                @if(Auth::user()->can('update', $project) || Auth::user()->can('delete', $project))
                     <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-100">
-                        <a href="{{ route('projects.edit', $project) }}"
-                           class="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                            Modifier le projet
-                        </a>
-                        <form action="{{ route('projects.destroy', $project) }}" method="POST">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" onclick="return confirm('Voulez-vous archiver ce projet ?')"
-                                    class="inline-flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-sm font-semibold transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
-                                Archiver
-                            </button>
-                        </form>
+                        @can('update', $project)
+                            <a href="{{ route('projects.edit', $project) }}"
+                               class="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                Modifier le projet
+                            </a>
+                        @endcan
+
+                        @can('delete', $project)
+                            <form action="{{ route('projects.destroy', $project) }}" method="POST" class="inline-flex">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" onclick="return confirm('Voulez-vous archiver ce projet ?')"
+                                        class="inline-flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-sm font-semibold transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                                    Archiver
+                                </button>
+                            </form>
+                        @endcan
                     </div>
-                @endcan
+                @endif
             </div>
 
             {{-- Mise à jour avancement (Chercheur) --}}

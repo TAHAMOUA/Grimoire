@@ -18,6 +18,21 @@ class Project extends Model
     ];
 
     /**
+     * Boot the model to handle events.
+     */
+    protected static function booted()
+    {
+        static::deleted(function ($project) {
+            // Le fait d'archiver (SoftDelete) déclenche le Job asynchrone
+            \App\Jobs\GenerateProjectReport::dispatch($project)->onQueue('reports');
+
+            // Et on déclenche l'événement pour la notification des membres
+            $project->loadMissing('users');
+            event(new \App\Events\ProjetCloture($project));
+        });
+    }
+
+    /**
      * Les utilisateurs appartenant à ce projet (avec leur rôle dans le pivot).
      */
     public function users()

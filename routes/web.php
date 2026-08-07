@@ -47,7 +47,7 @@ Route::middleware('auth')->group(function () {
         ->name('projects.archived');
 
     // CRUD standard
-    Route::resource('projects', ProjectController::class);
+    Route::resource('projects', ProjectController::class)->withTrashed(['show']);
 
     // Mettre à jour l'avancement (Responsable ou Chercheur)
     Route::patch('/projects/{project}/avancement', [ProjectController::class, 'updateAvancement'])
@@ -59,6 +59,10 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/projects/{project}/members/{user}', [ProjectController::class, 'removeMember'])
         ->name('projects.members.remove');
+
+    // Notifications
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
 });
 
 require __DIR__.'/auth.php';

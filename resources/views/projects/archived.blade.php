@@ -54,7 +54,7 @@
                                                 <div class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 text-sm font-bold shrink-0 bg-gray-100">
                                                     {{ strtoupper(substr($project->title, 0, 1)) }}
                                                 </div>
-                                                <span class="font-semibold text-gray-700">{{ $project->title }}</span>
+                                                <a href="{{ route('projects.show', $project) }}" class="font-semibold text-gray-700 hover:text-teal-600 transition">{{ $project->title }}</a>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">

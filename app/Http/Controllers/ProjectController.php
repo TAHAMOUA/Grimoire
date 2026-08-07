@@ -184,12 +184,7 @@ class ProjectController extends Controller
     {
         $this->authorize('delete', $project);
 
-        // ✅ Charger les membres avant archivage pour que le listener les ait disponibles
-        $project->load('users');
-
-        event(new ProjetCloture($project));
-
-        $project->delete();
+        $project->delete(); // Ceci déclenchera l'événement deleted du modèle (qui génère le rapport et la notif)
 
         return redirect()
             ->route('projects.index')

@@ -48,11 +48,6 @@ class EnvoyerNotificationCloture implements ShouldQueue
             $member->notify(new ProjetClotureNotification($project));
             Log::info("[Queue] Notification clôture envoyée à: {$member->name}");
         }
-
-        // 2. Dispatch du job de génération du rapport (queue séparée)
-        GenerateProjectReport::dispatch($project)->onQueue('reports');
-
-        Log::info("[Queue] GenerateProjectReport dispatché pour le projet #{$project->id}");
     }
 
     /**
