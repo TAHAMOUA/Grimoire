@@ -18,11 +18,14 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        $this->authorize('viewAny', Project::class);
+        $this->authorize('viewAny', Project::class);/* This is a Policy authorization method.
+        It asks:  "Is this user allowed to view projects?"     authorize($ability, $arguments)  */
+
 
         $projects = auth()->user()
             ->projects()
-            ->with('users')   // ✅ eager load — évite N+1 pour userRole()
+            ->with('users')   // ✅ eager load — évite N+1 pour userRole(), Without eager loading, you can create the famous N+1 query problem for example
+            // if u have 10 projects without eager loading u made a 11 queries instead of 2 queries if u use it.
             ->get();
 
         return view('projects.index', compact('projects'));
@@ -33,6 +36,7 @@ class ProjectController extends Controller
      */
     public function create()
     {
+         // Un utilisateur ayant le rôle global "responsable" peut créer un projet.
         $this->authorize('create', Project::class);
 
         return view('projects.create');
@@ -47,8 +51,25 @@ class ProjectController extends Controller
 
         $project = Project::create($request->validated());
 
-        // Attacher l'auteur en tant que responsable
+/* $project->fill($data);      ➡️ modifies model but doesn't save.
+$project->save();           ➡️ saves.
+But:Project::create($data); ➡️ creates + saves.
+
+ // Attacher l'auteur en tant que responsable */
         $project->users()->attach(auth()->id(), ['role' => 'responsable']);
+
+/*         User #5 is a member of Project #10 with role responsable.
+
+        attach() is a method on the belongsToMany relationship.
+        It adds a record to the pivot table (project_user) with the given user_id and role. 
+
+ */            /*is additional pivot data.
+            So Laravel inserts something like:
+
+            INSERT INTO project_user
+            (project_id, user_id, role)
+            VALUES
+            (10, 5, 'responsable'); */
 
         return redirect()
             ->route('projects.index')
@@ -66,8 +87,14 @@ class ProjectController extends Controller
         // ✅ Eager load des membres (évite N+1 dans la vue Blade)
         $project->load('users');
 
+                   /*  with() */
+        /* "I know I need users when I query."
+
+                    load()
+        "I already have the project; now load its users." */
+
         $userRole = $project->userRole(auth()->user());
-        $allUsers = User::whereNotIn('id', $project->users->pluck('id'))->get();
+        $allUsers = User::whereNotIn('id', $project->users->pluck('id') )->get(); /* pluck() extracts one attribute from a collection. */
 
         return view('projects.show', compact('project', 'userRole', 'allUsers'));
     }

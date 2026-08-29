@@ -13,7 +13,9 @@ use App\Models\Project;
 
 #[Fillable(['name', 'email', 'password', 'role'])]
 #[Hidden(['password', 'remember_token'])]
+
 class User extends Authenticatable
+
 { public function projects()
 {
     return $this->belongsToMany(Project::class)

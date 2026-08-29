@@ -5,6 +5,25 @@ namespace App\Policies;
 use App\Models\Project;
 use App\Models\User;
 
+/* Generating Policies
+Policies are classes that organize authorization logic around a particular model or resource. For example,
+ if your application is a blog, you may have an App\Models\Post model and a corresponding App\Policies\PostPolicy
+  to authorize user actions such as creating or updating posts.
+
+You may generate a policy using the make:policy Artisan command. 
+The generated policy will be placed in the app/Policies directory.
+ If this directory does not exist in your application, Laravel will create it for you:
+
+php artisan make:policy PostPolicy */
+
+/* The make:policy command will generate an empty policy class.
+ If you would like to generate a class with example policy
+  methods related to viewing, creating, updating, and deleting
+   the resource, you may provide a --model option when executing the command:
+
+php artisan make:policy PostPolicy --model=Post */
+
+
 class ProjectPolicy
 {
     /**

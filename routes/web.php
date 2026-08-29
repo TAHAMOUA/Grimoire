@@ -20,6 +20,12 @@ Route::get('/', function () {
 |--------------------------------------------------------------------------
 */
 
+
+/* Route::get('/flights', function () {
+    // Only authenticated users may access this route...
+})->middleware('auth'); */
+
+
 Route::middleware('auth')->group(function () {
 
     // Dashboard

@@ -39,6 +39,8 @@ class GenerateProjectReport implements ShouldQueue
         $date     = now()->format('Y-m-d_H-i-s');
         $filename = "reports/rapport_projet_{$this->project->id}_{$date}.txt";
 
+        dd(Storage::path($filename)); // rmv later
+
         $membres = $this->project->users->map(function ($user) {
             return "  - {$user->name} ({$user->email}) — rôle : {$user->pivot->role}";
         })->implode("\n");
